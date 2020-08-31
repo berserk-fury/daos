@@ -12,7 +12,7 @@
 
 // To use a test branch (i.e. PR) until it lands to master
 // I.e. for testing library changes
-//@Library(value="pipeline-lib@your_branch") _
+@Library(value="pipeline-lib@bmurrell/move-functions-from-DAOS-Jenkinsfile") _
 
 // For master, this is just some wildly high number
 next_version = "1000"
@@ -864,7 +864,7 @@ pipeline {
                         expression { ! skipStage() }
                     }
                     agent {
-                        label 'ci_vm9'
+                        label 'stage_vm9'
                     }
                     steps {
                         functionalTest inst_repos: daosRepos(),
@@ -883,7 +883,7 @@ pipeline {
                         expression { ! skipStage() }
                     }
                     agent {
-                        label 'ci_vm9'
+                        label 'stage_vm9'
                     }
                     steps {
                         functionalTest inst_repos: daosRepos(),
