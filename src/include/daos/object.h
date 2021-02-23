@@ -255,6 +255,7 @@ unsigned int daos_oclass_grp_nr(struct daos_oclass_attr *oc_attr,
 				struct daos_obj_md *md);
 int daos_oclass_fit_max(daos_oclass_id_t oc_id, int domain_nr, int target_nr,
 			daos_oclass_id_t *oc_id_p);
+bool daos_oclass_is_valid(daos_oclass_id_t oc_id);
 
 /** bits for the specified rank */
 #define DAOS_OC_SR_SHIFT	24
