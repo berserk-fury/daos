@@ -1179,35 +1179,31 @@ out:
 	return (grp_priv == NULL) ? NULL : &grp_priv->gp_pub;
 }
 
+/* NB: No D_DEBUG/D_ERROR/D_ASSERT/D_GOTO in this function, since this
+ * might be executed inside the D_DEBUG(), see d_vlog().
+ */
 int
 crt_group_rank(crt_group_t *grp, d_rank_t *rank)
 {
 	struct crt_grp_gdata	*grp_gdata;
 	struct crt_grp_priv	*grp_priv;
-	int			 rc = 0;
 
-	if (rank == NULL) {
-		D_ERROR("invalid parameter of NULL rank pointer.\n");
-		D_GOTO(out, rc = -DER_INVAL);
-	}
+	if (rank == NULL)
+		return -DER_INVAL;
 
-	if (!crt_initialized()) {
-		D_ERROR("CRT not initialized.\n");
-		D_GOTO(out, rc = -DER_UNINIT);
-	}
+	if (!crt_initialized())
+		return -DER_UNINIT;
+
 	grp_gdata = crt_gdata.cg_grp;
-	D_ASSERT(grp_gdata != NULL);
+	if (grp_gdata == NULL)
+		return -DER_INVAL;
 
 	grp_priv = crt_grp_pub2priv(grp);
 	*rank = grp_priv->gp_self;
+	if (*rank == CRT_NO_RANK)
+		return -DER_UNINIT;
 
-	if (*rank == CRT_NO_RANK) {
-		D_ERROR("Self rank was not set yet\n");
-		D_GOTO(out, rc = -DER_NONEXIST);
-	}
-
-out:
-	return rc;
+	return 0;
 }
 
 int

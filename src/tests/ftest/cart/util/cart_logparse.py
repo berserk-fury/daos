@@ -532,6 +532,17 @@ class LogIter():
                 l_obj = LogLine(line)
                 l_pid = l_obj.pid
                 self._data.append(l_obj)
+                # On the server side, pid is actually rank, which is -1
+                # until the rank is assigned, so let's try to merge -1
+                # rank lines with the following ranks. But it may cause
+                # trouble if all server logs are written into one file.
+                if l_pid != int(-1) and -1 in pids:
+                    if l_pid not in pids:
+                        pids[l_pid] = pids[-1]
+                    else:
+                        pids[l_pid]['line_count'] += pids[-1]['line_count']
+                    pids.pop(-1)
+
                 if l_pid in pids:
                     pids[l_pid]['line_count'] += 1
                 else:
@@ -557,6 +568,17 @@ class LogIter():
             pidtid = fields[2][5:-1]
             pid = pidtid.split("/")
             l_pid = int(pid[0])
+            # On the server side, pid is actually rank, which is -1
+            # until the rank is assigned, so let's try to merge -1
+            # rank lines with the following ranks. But it may cause
+            # trouble if all server logs are written into one file.
+            if l_pid != int(-1) and -1 in pids:
+                if l_pid not in pids:
+                    pids[l_pid] = pids[-1]
+                else:
+                    pids[l_pid]['line_count'] += pids[-1]['line_count']
+                pids.pop(-1)
+
             if l_pid in pids:
                 pids[l_pid]['line_count'] += 1
             else:
@@ -604,7 +626,7 @@ class LogIter():
         self._raw = raw
 
         if stateful:
-            if not pid:
+            if pid is None:
                 raise InvalidPid
             return StateIter(self)
 
@@ -614,7 +636,7 @@ class LogIter():
         self._iter_index = 0
         self._iter_count = 0
         if self.__from_file:
-            if not self._pid or self.bz2:
+            if self._pid is None or self.bz2:
                 self._fd.seek(0)
             else:
                 self._fd.seek(self._iter_pid['file_pos'])
@@ -646,7 +668,7 @@ class LogIter():
         while True:
             self._iter_index += 1
 
-            if self._pid and self._iter_index > self._iter_last_index:
+            if self._pid is not None and self._iter_index > self._iter_last_index:
                 assert self._iter_count == self._iter_pid['line_count']  # nosec
                 raise StopIteration
 
@@ -658,8 +680,8 @@ class LogIter():
             if self._trace_only and not line.trace:
                 continue
 
-            if self._pid:
-                if line.pid != self._pid:
+            if self._pid is not None:
+                if line.pid != -1 and line.pid != self._pid:
                     continue
 
                 if isinstance(line, LogRaw):
