@@ -969,6 +969,7 @@ pipeline {
                     steps {
                         functionalTest inst_repos: daosRepos(),
                                        inst_rpms: functionalPackages(1, next_version),
+                                       ftest_arg: 'auto:QEMU',
                                        test_function: 'runTestFunctionalV2'
                     }
                     post {
