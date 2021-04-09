@@ -859,17 +859,20 @@ crt_context_timeout_check(struct crt_context *crt_ctx)
 	if (crt_initialized() && crt_is_service() && crt_gdata.cg_swim_inited) {
 		struct crt_grp_priv	*gp = crt_gdata.cg_grp->gg_primary_grp;
 		struct crt_swim_membs	*csm = &gp->gp_membs_swim;
+		swim_id_t		 self_id = swim_self_get(csm->csm_ctx);
 
 		if (crt_ctx->cc_idx == csm->csm_crt_ctx_idx &&
-		    crt_ctx->cc_last_unpack_hlc != 0) {
+		    crt_ctx->cc_last_unpack_hlc != 0 &&
+		    self_id != SWIM_ID_INVALID) {
 			uint64_t delay = crt_hlc2msec(crt_hlc_get() -
 						   crt_ctx->cc_last_unpack_hlc);
 			uint64_t max_delay = swim_suspect_timeout_get() * 2 / 3;
 
 			if (delay > max_delay) {
 				D_ERROR("Network outage detected (idle for "
-					"%lu sec). Suspend SWIM eviction.\n",
-					delay / 1000);
+					"%lu sec >  maximum %lu sec). "
+					"Suspend SWIM eviction.\n",
+					delay / 1000, max_delay);
 				crt_swim_suspend_all();
 				crt_ctx->cc_last_unpack_hlc = 0;
 			}

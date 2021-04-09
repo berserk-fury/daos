@@ -769,13 +769,20 @@ void crt_swim_suspend_all(void)
 	D_SPIN_UNLOCK(&csm->csm_lock);
 }
 
+/**
+ * Calculate average of network delay and set it as expected PING timeout.
+ * But limiting this timeout in range from specified by user or default to
+ * suspicion timeout divided by 3. It will be automatically increased if
+ * network glitches accrues and decreased when network communication is
+ * normalized.
+ */
 void crt_swim_accommodate(void)
 {
 	struct crt_grp_priv	*grp_priv = crt_gdata.cg_grp->gg_primary_grp;
 	struct crt_swim_membs	*csm = &grp_priv->gp_membs_swim;
 	struct crt_swim_target	*cst;
-	uint64_t delay = 0;
-	uint64_t count = 0;
+	uint64_t		 average = 0;
+	uint64_t		 count = 0;
 
 	if (!crt_initialized() || !crt_is_service() ||
 	    !crt_gdata.cg_swim_inited)
@@ -784,7 +791,7 @@ void crt_swim_accommodate(void)
 	D_SPIN_LOCK(&csm->csm_lock);
 	D_CIRCLEQ_FOREACH(cst, &csm->csm_head, cst_link) {
 		if (cst->cst_state.sms_delay > 0) {
-			delay += cst->cst_state.sms_delay;
+			average += cst->cst_state.sms_delay;
 			count++;
 		}
 	}
@@ -795,16 +802,16 @@ void crt_swim_accommodate(void)
 		uint64_t max_timeout = swim_suspect_timeout_get() / 3;
 		uint64_t min_timeout = csm->csm_ctx->sc_default_ping_timeout;
 
-		delay = (2 * delay) / count;
-		if (delay < min_timeout)
-			delay = min_timeout;
-		else if (delay > max_timeout)
-			delay = max_timeout;
+		average = (2 * average) / count;
+		if (average < min_timeout)
+			average = min_timeout;
+		else if (average > max_timeout)
+			average = max_timeout;
 
-		if (delay != ping_timeout) {
+		if (average != ping_timeout) {
 			D_INFO("change PING timeout from %lu ms to %lu ms\n",
-			       ping_timeout, delay);
-			swim_ping_timeout_set(delay);
+			       ping_timeout, average);
+			swim_ping_timeout_set(average);
 		}
 	}
 }
